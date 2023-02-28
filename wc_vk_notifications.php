@@ -71,8 +71,6 @@ class VkPlugin
         // Отделяем сообщение вконце
         $fullOrder .= $lineCut;
 
-        var_dump($fullOrder); die;
-
         // Отправляем сообщение в вк
         $vkMethods->send($fullOrder);
     }
