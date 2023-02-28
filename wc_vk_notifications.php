@@ -2,7 +2,7 @@
 /*
 Plugin Name: WC VK Notifications
 Description: Уведомления о новых заказах в ЛС в ВК
-Plugin URI: ''
+Plugin URI: https://github.com/ZedByl/wc_vk_notifications
 Version: 1.0
 Author: ZedByl
 License: GPLv3
@@ -23,61 +23,56 @@ class VkPlugin
     }
 
 	public function vk_notification( $order_id ) {
-	        $vkID = (int) esc_attr( get_option('vk_id'));
-            $vkGroupKey = esc_attr( get_option('vk_group_key'));
+        $vkID = (int) esc_attr( get_option('vk_id'));
+        $vkGroupKey = esc_attr( get_option('vk_group_key'));
 
-            $vkMethods = new VkMethods($vkID, $vkGroupKey);
-            // Вся информация о заказе
-            $order2 = new WC_Order($order_id);
+        $vkMethods = new VkMethods($vkID, $vkGroupKey);
+        // Вся информация о заказе
+        $order2 = new WC_Order($order_id);
 
-            // Данные заказа
-            $currentJson = json_decode($order2, true);
-            $currentNote = "<br>Пожелания к заказу: <br>";
-            $currentNote .= $currentJson["customer_note"];
-            $lineCut = '--------------------------------------';
-            $currentName = $currentJson["billing"]["first_name"];
-            $currentLastName = $currentJson["billing"]["last_name"];
-            $currentCity = $currentJson["billing"]["city"];
-            $currentState = $currentJson["billing"]["state"];
-            $currentAddress = $currentJson["billing"]["address_1"];
-            $currentPostCode = $currentJson["billing"]["postcode"];
-            $paymentMethod = $currentJson["payment_method_title"];
-            $currentPhone = (string) $currentJson["billing"]["phone"];
+        // Данные заказа
+        $currentJson = json_decode($order2, true);
+        $currentNote = "<br>Пожелания к заказу: <br>";
+        $currentNote .= $currentJson["customer_note"];
+        $lineCut = '--------------------------------------';
+        $currentName = $currentJson["billing"]["first_name"];
+        $currentLastName = $currentJson["billing"]["last_name"];
+        $currentCity = $currentJson["billing"]["city"];
+        $currentState = $currentJson["billing"]["state"];
+        $currentAddress = $currentJson["billing"]["address_1"];
+        $currentPostCode = $currentJson["billing"]["postcode"];
+        $paymentMethod = $currentJson["payment_method_title"];
+        $currentPhone = (string) $currentJson["billing"]["phone"];
 
-            // Собираем строку для сообщения
+        // Собираем строку для сообщения
+        // Инфа которую вбил юзер
+        $line = "Имя: ";$line .= $currentName;
+        $line .= '<br> Фамилия: ';$line .= $currentLastName;
+        $line .= '<br> Область: ';$line .= $currentState;
+        $line .= '<br> Город: ';$line .= $currentCity;
+        $line .= '<br> Адрес: ';$line .= $currentAddress;
+        $line .= '<br> Индекс: ';$line .= $currentPostCode;
+        $line .= '<br> Номер телефона: ';$line .= $currentPhone;
+        $line .= '<br> Оплата: ';$line .= $paymentMethod;
+        $line .= '<br>';$line .= $currentNote;
 
-            // Инфа которую вбил юзер
-            $line = "Имя: ";$line .= $currentName;
-            $line .= '<br> Фамилия: ';$line .= $currentLastName;
-            $line .= '<br> Область: ';$line .= $currentState;
-            $line .= '<br> Город: ';$line .= $currentCity;
-            $line .= '<br> Адрес: ';$line .= $currentAddress;
-            $line .= '<br> Индекс: ';$line .= $currentPostCode;
-            $line .= '<br> Номер телефона: ';$line .= $currentPhone;
-            $line .= '<br> Оплата: ';$line .= $paymentMethod;
-            $line .= '<br>';$line .= $currentNote;
+        $order = wc_get_order($order_id);
 
-            $order = wc_get_order($order_id);
+        // Первое разделение сообщения
+        $fullOrder = $lineCut;$fullOrder .= '<br>';
 
-            // Первое разделение сообщения
-            $fullOrder = $lineCut;$fullOrder .= '<br>';
+        // Собираем инфу обо всем что он купил
+        foreach ($order->get_items() as $item_key => $item ):
+            $fullOrder .= $item["name"];$fullOrder .= ' - ';$fullOrder .= $item["quantity"];$fullOrder .= ' шт.<br>';
+            $itemTotal += (int)$item["total"];endforeach;
+            $fullOrder .= 'Итог: ';$fullOrder .= $itemTotal;$fullOrder .= ' руб.';$fullOrder .= '<br>';$fullOrder .= $line;$fullOrder .= '<br>';
 
-            // Собираем инфу обо всем что он купил
-            foreach ($order->get_items() as $item_key => $item ):
-                $fullOrder .= $item["name"];$fullOrder .= ' - ';$fullOrder .= $item["quantity"];$fullOrder .= ' шт.<br>';
-                $itemTotal += (int)$item["total"];
-            endforeach;
+        // Отделяем сообщение вконце
+        $fullOrder .= $lineCut;
 
-            $fullOrder .= 'Итог: ';$fullOrder .= $itemTotal;
-            $fullOrder .= ' руб.';$fullOrder .= '<br>';
-            $fullOrder .= $line;$fullOrder .= '<br>';
-
-            // Отделяем сообщение вконце
-            $fullOrder .= $lineCut;
-
-            // Отправляем сообщение в вк
-            $vkMethods->send($fullOrder);
-		}
+        // Отправляем сообщение в вк
+        $vkMethods->send($fullOrder);
+    }
 
 	public function vkOptionsGroup($input){
 		return $input;
@@ -222,6 +217,7 @@ if( class_exists('VkPlugin')) {
 	$vkplugin = new VkPlugin();
 	$vkplugin->register();
 }
+
 //activation
 register_activation_hook(__FILE__, array($vkplugin, 'activate'));
 //deactivation
