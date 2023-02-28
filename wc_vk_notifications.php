@@ -3,7 +3,7 @@
 Plugin Name: WC VK Notifications
 Description: Уведомления о новых заказах в ЛС в ВК
 Plugin URI: https://github.com/ZedByl/wc_vk_notifications
-Version: 1.0
+Version: 1.1.1
 Author: ZedByl
 License: GPLv3
 */
@@ -27,48 +27,51 @@ class VkPlugin
         $vkGroupKey = esc_attr( get_option('vk_group_key'));
 
         $vkMethods = new VkMethods($vkID, $vkGroupKey);
+
         // Вся информация о заказе
-        $order2 = new WC_Order($order_id);
+        $orderData = wc_get_order($order_id);
 
         // Данные заказа
-        $currentJson = json_decode($order2, true);
-        $currentNote = "<br>Пожелания к заказу: <br>";
-        $currentNote .= $currentJson["customer_note"];
         $lineCut = '--------------------------------------';
-        $currentName = $currentJson["billing"]["first_name"];
-        $currentLastName = $currentJson["billing"]["last_name"];
-        $currentCity = $currentJson["billing"]["city"];
-        $currentState = $currentJson["billing"]["state"];
-        $currentAddress = $currentJson["billing"]["address_1"];
-        $currentPostCode = $currentJson["billing"]["postcode"];
-        $paymentMethod = $currentJson["payment_method_title"];
-        $currentPhone = (string) $currentJson["billing"]["phone"];
+        $currentNote = $orderData->get_customer_note();
+        $currentName = $orderData->get_billing_first_name();
+        $currentLastName = $orderData->get_billing_last_name();
+        $currentCity = $orderData->get_billing_city();
+        $currentAddress = $orderData->get_billing_address_1();
+        $currentPostCode = $orderData->get_billing_postcode();
+        $paymentMethod = $orderData->get_payment_method_title();
+        $currentPhone = $orderData->get_billing_phone();
+        $shippingToDisplay = $orderData->get_shipping_to_display();
+        $paid = $orderData->is_paid() ? 'Оплачен' : 'Неоплачен';
+        $code = $orderData->get_coupon_codes()[0] ?: 'Без промокода';
 
         // Собираем строку для сообщения
         // Инфа которую вбил юзер
-        $line = "Имя: ";$line .= $currentName;
+        $line = "Заказ: ";$line .= $paid;
+        $line .= '<br><br> Имя: ';$line .= $currentName;
         $line .= '<br> Фамилия: ';$line .= $currentLastName;
-        $line .= '<br> Область: ';$line .= $currentState;
         $line .= '<br> Город: ';$line .= $currentCity;
         $line .= '<br> Адрес: ';$line .= $currentAddress;
         $line .= '<br> Индекс: ';$line .= $currentPostCode;
         $line .= '<br> Номер телефона: ';$line .= $currentPhone;
         $line .= '<br> Оплата: ';$line .= $paymentMethod;
-        $line .= '<br>';$line .= $currentNote;
-
-        $order = wc_get_order($order_id);
+        $line .= '<br> Доставка: ';$line .= $shippingToDisplay;
+        $line .= '<br> Промокод: ';$line .= $code;
+        $line .= '<br><br>Пожелания к заказу: ';$line .= $currentNote;
 
         // Первое разделение сообщения
         $fullOrder = $lineCut;$fullOrder .= '<br>';
 
         // Собираем инфу обо всем что он купил
-        foreach ($order->get_items() as $item_key => $item ):
+        foreach ($orderData->get_items() as $item_key => $item ):
             $fullOrder .= $item["name"];$fullOrder .= ' - ';$fullOrder .= $item["quantity"];$fullOrder .= ' шт.<br>';
             $itemTotal += (int)$item["total"];endforeach;
             $fullOrder .= 'Итог: ';$fullOrder .= $itemTotal;$fullOrder .= ' руб.';$fullOrder .= '<br>';$fullOrder .= $line;$fullOrder .= '<br>';
 
         // Отделяем сообщение вконце
         $fullOrder .= $lineCut;
+
+        var_dump($fullOrder); die;
 
         // Отправляем сообщение в вк
         $vkMethods->send($fullOrder);
